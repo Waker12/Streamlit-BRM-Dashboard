@@ -24,7 +24,11 @@ Keep the password in Streamlit's private secrets settings, never in GitHub or ch
 
 No Render subscription is required. A fresh deployment contains synthetic demo data and an empty Uploaded data workspace. After signing in, use **Data workspace** to import reports. No source workbooks, reporting databases or private audit reports are bundled.
 
-**Storage limitation:** Community Cloud local storage can reset on reboot or redeployment. Retain your original exports. Use this free deployment for preview until persistent external storage and backup/restore are implemented; permanent historical data storage is not promised.
+To load a prepared workspace, open **Data workspace → Transfer existing workspace**, upload the private ZIP package and click **Import workspace package**. All included datasets are validated and committed together; conflicting records require explicit replacement. Then select **Uploaded data** in the sidebar. Original source import history is retained in the audit trail.
+
+Use **Prepare workspace backup → Download private workspace backup** after monthly updates. Packages contain confidential reporting data; keep them locally and never commit them to this public repository.
+
+**Storage limitation:** Community Cloud local storage can reset on reboot or redeployment. Retain your original exports and workspace backups so you can restore them with one upload. Automatic persistent external storage is not implemented; permanent historical data storage is not promised.
 
 ## Local use
 

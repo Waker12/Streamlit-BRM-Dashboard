@@ -105,9 +105,9 @@ class Store:
         c=sqlite3.connect(self.path,timeout=20)
         c.execute('PRAGMA foreign_keys=ON')
         return c
-    def read(self,category):
+    def read(self,category,_conn=None):
         if category not in SCHEMAS:raise ValueError('Unknown dataset')
-        with self.connect() as conn:rows=conn.execute(f'SELECT payload FROM {category}').fetchall()
+        with (nullcontext(_conn) if _conn is not None else self.connect()) as conn:rows=conn.execute(f'SELECT payload FROM {category}').fetchall()
         df=pd.DataFrame([json.loads(x[0]) for x in rows])
         for col in SCHEMAS[category].required+SCHEMAS[category].optional:
             if col not in df:df[col]=None
@@ -119,7 +119,7 @@ class Store:
     def configs(self):
         with self.connect() as conn:return {n:json.loads(p) for n,p in conn.execute('SELECT name,payload FROM import_configs')}
     def ingest(self,category,frame,filename,replace=False,_conn=None):
-        df,errors=validate(category,frame,self.read('sku_master'))
+        df,errors=validate(category,frame,self.read('sku_master',_conn))
         records=json.loads(df.to_json(orient='records'))
         serialized=json.dumps(records,sort_keys=True,separators=(',',':'))
         fingerprint=hashlib.sha256((category+serialized).encode()).hexdigest()
@@ -128,13 +128,13 @@ class Store:
             if not conn.in_transaction:conn.execute('BEGIN IMMEDIATE')
             # Cross-file consistency is checked against existing approved master rows too.
             if category=='sku_master' and not errors:
-                old=self.read('sku_master')
+                old=self.read('sku_master',conn)
                 if not old.empty:
                     old=old[~old.apply(lambda r:json.dumps([r[k] for k in SCHEMAS[category].keys],separators=(',',':')) in keys,axis=1)]
                     _,cross_errors=validate(category,pd.concat([old,df],ignore_index=True))
                     errors+=cross_errors
             if category=='traffic' and not errors:
-                old=self.read('traffic')
+                old=self.read('traffic',conn)
                 for r in records:
                     x=old[(old.country==r['country']) & (old.marketplace==r['marketplace']) & (old.period_start==r['period_start']) & (old.period_end==r['period_end']) & (old.sales_basis==r['sales_basis'])]
                     if len(x)>1:errors.append('Overlapping audience scope.')

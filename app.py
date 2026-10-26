@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from bosch_bi.schemas import SCHEMAS, BUS, recognize, suggest_mapping, template
 from bosch_bi.storage import Store, validate
+from bosch_bi.transfer import export_workspace,read_workspace,import_workspace
 from bosch_bi.adapters import adapter_kind,parse_source,period_from_filename
 from bosch_bi.policy import FX_POLICY,fixed_rate
 from bosch_bi.demo import generate
@@ -588,6 +589,23 @@ elif page=='Data workspace':
     st.info('Imports go to the uploaded-data workspace. The synthetic demonstration remains separate. Switch Data source to Uploaded data to review imported results.')
     if not os.environ.get('BOSCH_BI_DB'):
         st.warning('Development storage is local SQLite. Production requires BOSCH_BI_DB on a persistent mounted volume, authenticated hosting, backups and restricted file access. This runtime is not configured as durable production storage.')
+    with st.expander('Transfer existing workspace · one file',expanded=True):
+        st.caption('Load a prepared Bosch workspace package to transfer all datasets together. Original import history is retained in the audit trail. This private data file must stay out of GitHub.')
+        package=st.file_uploader('Upload workspace package',type=['zip'],key='workspace_package')
+        if package is not None:
+            try:
+                package_frames,_=read_workspace(package.getvalue())
+                st.dataframe(pd.DataFrame([{'Dataset':SCHEMAS[k].title,'Rows':len(v)} for k,v in package_frames.items()]),hide_index=True,width='stretch')
+                replace_package=st.checkbox('Replace conflicting records with this package',key='replace_package')
+                if st.button('Import workspace package',type='primary'):
+                    result=import_workspace(store,package.getvalue(),package.name,replace_package)
+                    if result['status']=='rejected':st.error(result['detail'])
+                    else:st.success('Workspace loaded. Select Uploaded data in the sidebar to view your reports.');st.info(result['detail'])
+            except ValueError as exc:st.error(str(exc))
+        if has_uploaded_data:
+            if st.button('Prepare workspace backup'):
+                st.download_button('Download private workspace backup',export_workspace(store),'bosch-workspace.zip','application/zip')
+        st.caption('Keep a backup locally. Streamlit Community Cloud storage may reset; this transfer feature does not provide automatic persistent storage.')
     a,b,c=st.tabs(['Import & validate','Data coverage & history','Import contracts'])
     with a:
         section('Reporting data imports','Stage one or more CSV/XLSX or supported Lazada XLS files, confirm their columns and scope, then commit validated rows. Excel cells must contain values, not unevaluated formulas.')
