@@ -2,8 +2,6 @@ name: Dashboard checks
 on:
   push:
     branches: [main, feature/display-controls]
-  pull_request:
-    branches: [main]
 permissions:
   contents: read
 jobs:
