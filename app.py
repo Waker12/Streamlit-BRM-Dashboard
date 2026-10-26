@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from bosch_bi.schemas import SCHEMAS, BUS, recognize, suggest_mapping, template
 from bosch_bi.storage import Store, validate
-from bosch_bi.transfer import export_workspace,read_workspace,import_workspace
+from bosch_bi.transfer import export_workspace,read_workspace,import_workspace,decrypt_workspace
 from bosch_bi.adapters import adapter_kind,parse_source,period_from_filename
 from bosch_bi.policy import FX_POLICY,fixed_rate
 from bosch_bi.demo import generate
@@ -587,6 +587,21 @@ elif page=='Advertising performance':
 
 elif page=='Data workspace':
     st.info('Imports go to the uploaded-data workspace. The synthetic demonstration remains separate. Switch Data source to Uploaded data to review imported results.')
+    prepared_path=Path(__file__).parent/'prepared'/'my-workspace.enc'
+    if prepared_path.is_file():
+        section('Load prepared actual data','Your previously supplied exports are available as an encrypted package. Paste the separate transfer key to load them; no download or file upload is needed.')
+        with st.form('prepared_data',clear_on_submit=True):
+            transfer_key=st.text_input('Transfer key',type='password')
+            replace_prepared=st.checkbox('Replace conflicting records with the prepared data')
+            load_prepared=st.form_submit_button('Load prepared actual data',type='primary')
+        if load_prepared:
+            try:
+                with st.spinner('Validating and importing your prepared data…'):
+                    unlocked=decrypt_workspace(prepared_path.read_bytes(),transfer_key)
+                    result=import_workspace(store,unlocked,'prepared-actual-data.zip',replace_prepared)
+                if result['status']=='rejected':st.error(result['detail'])
+                else:st.success('Actual data loaded. Select Uploaded data in the sidebar to view your reports.')
+            except ValueError as exc:st.error(str(exc))
     if not os.environ.get('BOSCH_BI_DB'):
         st.warning('Development storage is local SQLite. Production requires BOSCH_BI_DB on a persistent mounted volume, authenticated hosting, backups and restricted file access. This runtime is not configured as durable production storage.')
     with st.expander('Transfer existing workspace · one file',expanded=True):

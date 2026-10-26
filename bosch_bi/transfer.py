@@ -2,12 +2,31 @@
 from datetime import datetime, timezone
 from io import BytesIO
 import json
+import base64
+import binascii
 from zipfile import ZipFile, BadZipFile, ZIP_DEFLATED
 import pandas as pd
 from .schemas import SCHEMAS
 
 MAX_BYTES = 64 * 1024 * 1024
 FORMAT = 'bosch-brm-workspace-v1'
+ENCRYPTED_HEADER = b'BRMENC1\x00'
+
+
+def decrypt_workspace(encrypted, transfer_key):
+    """Decrypt an authenticated AES-256-GCM envelope using an out-of-band key."""
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from cryptography.exceptions import InvalidTag
+    try:
+        key = base64.b64decode(transfer_key.strip(), altchars=b'-_', validate=True)
+        if len(key) != 32 or not encrypted.startswith(ENCRYPTED_HEADER):
+            raise ValueError('Invalid key or package header.')
+        if len(encrypted) > 20 * 1024 * 1024 or len(encrypted) < len(ENCRYPTED_HEADER)+28:
+            raise ValueError('Invalid encrypted package size.')
+        start = len(ENCRYPTED_HEADER)
+        return AESGCM(key).decrypt(encrypted[start:start+12], encrypted[start+12:], FORMAT.encode())
+    except (ValueError, binascii.Error, InvalidTag) as exc:
+        raise ValueError('Unable to unlock prepared data. Check the transfer key and try again.') from exc
 
 
 def export_workspace(store):

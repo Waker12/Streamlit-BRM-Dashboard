@@ -26,6 +26,8 @@ No Render subscription is required. A fresh deployment contains synthetic demo d
 
 To load a prepared workspace, open **Data workspace → Transfer existing workspace**, upload the private ZIP package and click **Import workspace package**. All included datasets are validated and committed together; conflicting records require explicit replacement. Then select **Uploaded data** in the sidebar. Original source import history is retained in the audit trail.
 
+If an encrypted prepared package is included, **Data workspace → Load prepared actual data** accepts its separate transfer key instead. Packages use authenticated AES-256-GCM encryption with a randomly generated 256-bit key. The key is supplied separately, never committed to GitHub, and is not your dashboard login password. Import still requires an authenticated app session and validates every dataset transactionally. The form clears after submission. Keep the transfer key private and retain it to restore the prepared data after a storage reset.
+
 Use **Prepare workspace backup → Download private workspace backup** after monthly updates. Packages contain confidential reporting data; keep them locally and never commit them to this public repository.
 
 **Storage limitation:** Community Cloud local storage can reset on reboot or redeployment. Retain your original exports and workspace backups so you can restore them with one upload. Automatic persistent external storage is not implemented; permanent historical data storage is not promised.

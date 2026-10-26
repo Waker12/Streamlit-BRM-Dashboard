@@ -8,6 +8,24 @@ from bosch_bi.demo import generate
 from bosch_bi.transfer import export_workspace, read_workspace, import_workspace, FORMAT
 
 
+def test_encrypted_transfer_rejects_wrong_key_and_tampering():
+    import base64
+    import os
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    from bosch_bi.transfer import decrypt_workspace, ENCRYPTED_HEADER
+    key=AESGCM.generate_key(bit_length=256)
+    nonce=os.urandom(12)
+    raw=package({'marketplace':generate()['marketplace'].head(1).to_dict('records')})
+    encrypted=ENCRYPTED_HEADER+nonce+AESGCM(key).encrypt(nonce,raw,FORMAT.encode())
+    encoded=base64.urlsafe_b64encode(key).decode()
+    assert decrypt_workspace(encrypted,encoded)==raw
+    for bad_key in ['bad',base64.urlsafe_b64encode(os.urandom(32)).decode()]:
+        with pytest.raises(ValueError):decrypt_workspace(encrypted,bad_key)
+    corrupted=encrypted[:-1]+bytes([encrypted[-1]^1])
+    with pytest.raises(ValueError):decrypt_workspace(corrupted,encoded)
+    with pytest.raises(ValueError):decrypt_workspace(b'wrong header',encoded)
+
+
 def package(datasets):
     buf=BytesIO()
     with ZipFile(buf,'w') as archive:
