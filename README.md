@@ -56,3 +56,7 @@ python -m pytest -q
 ```
 
 Tests use synthetic fixtures. Optional private-workbook checks run only when explicit local file/manifest environment variables are supplied. They are skipped on a clean checkout.
+
+## Display controls
+
+Sidebar **Display settings** selects **No decimals** or **2 decimals** for KPI cards, report tables, chart axes, hover values and labels. Calculations and CSV exports retain their original precision. **Labels on all charts** sets the default; each chart has a separate **Data labels** switch. Per-chart choices persist when navigating between reports. Shopee charts use orange, Lazada charts use blue, with lighter previous-year bars and darker rate/ROAS lines. Executive reporting retains the Bosch palette.

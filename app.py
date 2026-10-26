@@ -16,6 +16,7 @@ from bosch_bi.policy import FX_POLICY,fixed_rate
 from bosch_bi.demo import generate
 from bosch_bi.engine import divide,growth,pp,total,weighted_rate,exact_audience,convert,previous_month,previous_year_period,comparable_dates,ranked_products,opportunity,complete_scopes,complete_months,reconciliation,product_store_reconciliation
 from bosch_bi.charts import plot,combo,donut,BLUE,TEAL,NAVY,RED
+from bosch_bi.presentation import number,numeric_display,numeric_columns,marketplace_theme,MARKETPLACE_COLORS
 
 st.set_page_config(page_title='Bosch | Commerce Intelligence',page_icon='📊',layout='wide',initial_sidebar_state='expanded')
 from bosch_bi.security import require_access
@@ -27,7 +28,7 @@ st.markdown('''<style>
 [data-testid="stSidebar"] [role="radiogroup"]{gap:.55rem}[data-testid="stSidebar"] [role="radio"]{accent-color:#56C0F3}
 [data-testid="stMetric"]{background:#fff;border:1px solid #E2E8EF;border-radius:10px;padding:18px 18px 15px;box-shadow:0 3px 8px #152E4304}[data-testid="stMetricLabel"]{color:#607487;font-size:.8rem}[data-testid="stMetricValue"]{font-size:1.65rem;font-weight:650;color:#173B57}
 [data-testid="stVerticalBlockBorderWrapper"]>div{border-color:#E4EAF0!important;border-radius:10px!important;background:#fff}
-.eyebrow{font-size:.71rem;font-weight:700;letter-spacing:.15em;color:#74899A;text-transform:uppercase}.brand{font-size:2.15rem;font-weight:800;letter-spacing:.035em;color:#ED1C24!important}.brand-sub{font-size:.68rem;letter-spacing:.16em;color:#99B2C5!important}.section-rule{height:4px;background:linear-gradient(90deg,#E20015 0 19%,#B51455 19% 35%,#654A92 35% 50%,#007BC0 50% 70%,#00A4B4 70% 85%,#76B82A 85%);border-radius:2px;margin-bottom:20px}.demo-pill{display:inline-block;padding:5px 10px;border:1px solid #E9D9A1;color:#8D6913;background:#FFFAE9;font-size:.72rem;border-radius:5px;font-weight:650}.subtle{color:#6A7F90;font-size:.88rem}.card-note{font-size:.72rem;color:#718497;margin:5px 1px 12px}.stDownloadButton button{font-size:.78rem}div[data-testid="stTabs"] button{font-size:.86rem}
+.marketplace-heading{border-left:4px solid;padding:5px 14px;margin:4px 0 16px;background:linear-gradient(90deg,#f8fafc,transparent);border-radius:4px}.marketplace-heading>span{font-size:.68rem;letter-spacing:.12em;font-weight:800}.marketplace-heading h3{margin:4px 0}.report-banner{display:flex;align-items:center;gap:18px;padding:14px 18px;margin:12px 0;border-radius:10px;background:#fff;border:1px solid #e2e8ef}.bosch-banner{border-left:5px solid #e20015;background:linear-gradient(100deg,#fff4f4,#fff 45%,#eef7fc)}.bosch-banner b{color:#e20015;letter-spacing:.08em}.bosch-banner span{font-size:.85rem;color:#536779}.eyebrow{font-size:.71rem;font-weight:700;letter-spacing:.15em;color:#74899A;text-transform:uppercase}.brand{font-size:2.15rem;font-weight:800;letter-spacing:.035em;color:#ED1C24!important}.brand-sub{font-size:.68rem;letter-spacing:.16em;color:#99B2C5!important}.section-rule{height:4px;background:linear-gradient(90deg,#E20015 0 19%,#B51455 19% 35%,#654A92 35% 50%,#007BC0 50% 70%,#00A4B4 70% 85%,#76B82A 85%);border-radius:2px;margin-bottom:20px}.demo-pill{display:inline-block;padding:5px 10px;border:1px solid #E9D9A1;color:#8D6913;background:#FFFAE9;font-size:.72rem;border-radius:5px;font-weight:650}.subtle{color:#6A7F90;font-size:.88rem}.card-note{font-size:.72rem;color:#718497;margin:5px 1px 12px}.stDownloadButton button{font-size:.78rem}div[data-testid="stTabs"] button{font-size:.86rem}
 </style>''',unsafe_allow_html=True)
 
 @st.cache_data
@@ -38,16 +39,20 @@ def database(path):return Store(path)
 
 def fmt(v,kind='number',currency=None):
     if v is None or pd.isna(v):return '—'
-    if kind=='pct':return f'{v:,.2f}%'
-    if kind=='pp':return f'{v:+.2f} pp'
-    if kind=='money':return f'{currency or report_currency} {v:,.0f}'
-    if kind=='decimal':return f'{v:,.2f}'
-    return f'{v:,.0f}'
+    places=st.session_state.get('decimal_places',2)
+    if kind=='pct':return number(v,places)+'%'
+    if kind=='pp':return number(v,places,True)+' pp'
+    if kind=='money':return f'{currency or report_currency} '+number(v,places)
+    return number(v,places)
 
 def caption(text):st.markdown(f'<div class="subtle">{html.escape(text)}</div>',unsafe_allow_html=True)
 
 def section(title,note=None):
-    st.subheader(title)
+    platform=next((p for p in MARKETPLACE_COLORS if p.lower() in title.lower()),None)
+    if platform:
+        accent=MARKETPLACE_COLORS[platform]
+        st.markdown(f'<div class="marketplace-heading" style="border-left-color:{accent}"><span style="color:{accent}">{platform.upper()}</span><h3>{html.escape(title)}</h3></div>',unsafe_allow_html=True)
+    else:st.subheader(title)
     if note:st.caption(note)
 
 def table(df,key,changes=()):
@@ -56,15 +61,15 @@ def table(df,key,changes=()):
         if not isinstance(v,(int,float)) or pd.isna(v):return ''
         return 'color: #147D64; background-color: #EAF7F2' if v>=0 else 'color: #C53545; background-color: #FFF0F1'
     labels={'canonical_sku':'Reporting SKU / listing ID','previous_rank':'Previous rank','rank_movement':'Rank movement','gm_pct':'GM %','share':'Revenue share %','cr':'Buyer CR %','asp':'ASP','atc_units':'Add-to-cart units','share_pp':'Share Δ pp','cr_pp':'CR Δ pp','is_bundle':'Bundle','revenue_change':'Revenue Δ %','units_change':'Units Δ %','visitors_change':'Visitors Δ %','buyers_change':'Buyers Δ %','atc_units_change':'ATC Δ %','asp_change':'ASP Δ %'}
-    display=df.rename(columns={c:labels.get(c,c.replace('_',' ').capitalize() if c.islower() or '_' in c else c) for c in df.columns})
+    display=numeric_display(df).rename(columns={c:labels.get(c,c.replace('_',' ').capitalize() if c.islower() or '_' in c else c) for c in df.columns})
     signed=[labels.get(c,c.replace('_',' ').capitalize() if c.islower() or '_' in c else c) for c in changes if c in df]
-    styled=display.style.map(color,subset=signed).format(precision=2,na_rep='—')
-    if signed:styled=styled.format({c:'{:+,.2f}' for c in signed},na_rep='—')
+    places=st.session_state.get('decimal_places',2)
+    numeric=numeric_columns(display)
+    styled=display.style.map(color,subset=signed).format({c:lambda v,c=c:number(v,places,c in signed) for c in numeric},na_rep='—')
     config={}
     for original,shown in zip(df.columns,display.columns):
-        if original in ['rank','previous_rank','units','visitors','buyers','atc_units','orders','Rows','Records']:
-            config[shown]=st.column_config.NumberColumn(format='%d')
-        elif original=='rank_movement':config[shown]=st.column_config.NumberColumn(format='%+d')
+        if shown in numeric:
+            config[shown]=st.column_config.NumberColumn(format=('%+' if shown in signed else '%')+f'.{places}f')
     st.dataframe(styled,width='stretch',hide_index=True,column_config=config)
     # Escape spreadsheet formulas in textual cells before exporting CSV.
     safe=df.copy()
@@ -81,12 +86,19 @@ path=os.environ.get('BOSCH_BI_DB',str(Path(__file__).parent/'data'/'reporting.sq
 store=database(path)
 has_uploaded_data=not store.read('financial_actuals').empty or not store.read('marketplace').empty
 NAV=['Executive overview','Financial performance','Marketplace performance','Product & SKU','Conversion analysis','Advertising performance','BRM workbook','Data workspace','Reporting methodology']
+def reset_chart_labels():
+    st.session_state['chart_label_preferences']={}
+    for k in list(st.session_state):
+        if k.startswith('chart_labels_'):del st.session_state[k]
 with st.sidebar:
     st.markdown('<div class="brand">BOSCH</div><div class="brand-sub">POWER TOOLS · COMMERCE INTELLIGENCE</div>',unsafe_allow_html=True)
     st.write('');st.divider()
     page=st.radio('WORKSPACE',NAV,label_visibility='visible')
     st.divider()
     mode=st.radio('Data source',['Demo workspace','Uploaded data'],index=1 if has_uploaded_data else 0,key='source_mode')
+    with st.expander('Display settings',expanded=True):
+        st.selectbox('Decimals',[0,2],index=1,format_func=lambda v:'No decimals' if v==0 else '2 decimals',key='decimal_places',help='Applies to KPI cards, tables, chart values, axes and tooltips. Source values are unchanged.')
+        st.toggle('Labels on all charts',key='default_chart_labels',on_change=reset_chart_labels,help='Set the default for all charts. Each chart also has its own Data labels switch.')
     st.caption('Malaysia\n\nShopee · Lazada')
     st.write('');st.caption('MONTHLY BUSINESS REVIEW\n\nFinance · Commerce · Growth')
 
@@ -97,6 +109,8 @@ head,badge=st.columns([5,1.5])
 with head:
     st.markdown('<div class="eyebrow">E-COMMERCE INTELLIGENCE / MANAGEMENT REPORTING</div>',unsafe_allow_html=True)
     st.title(page)
+    if page=='Executive overview':
+        st.markdown('<div class="report-banner bosch-banner"><b>BOSCH</b><span>Malaysia · Business review</span></div>',unsafe_allow_html=True)
 with badge:
     st.write('')
     if mode=='Demo workspace':st.markdown('<span class="demo-pill">● SYNTHETIC DEMO DATA</span>',unsafe_allow_html=True)
@@ -246,7 +260,7 @@ def annual_target():
 
 def finance_chart(key):
     df=financial_months().set_index('Month')
-    plot(combo(df,['Current year','Previous year'],['Official forecast','Stretch forecast'],report_currency),key,350)
+    plot(combo(df,['Current year','Previous year'],['Official forecast','Stretch forecast'],report_currency,marketplace='Bosch'),key,350)
 
 if page=='BRM workbook':
     st.caption('The five BRM tabs share a common reporting foundation. Other workbook tabs are excluded. Internal TNS takes priority; raw 2026 shop exports take priority over manual tracking.')
@@ -288,7 +302,7 @@ if page=='BRM workbook':
                 current_shop=shop[(shop.marketplace==platform)&(shop.period==f'{year}-{m:02d}')]
                 data.append({'Month':calendar.month_abbr[m],'Prior tracker GMV':total(old,'gmv'),'Current raw GMV':total(current_shop,'gmv')})
             if platform=='Shopee':st.warning('Prior-year Shopee order status is unverified. Bars are a reference comparison; Confirmed-only YoY is unavailable until the historical basis is established.')
-            chart=pd.DataFrame(data);plot(combo(chart.set_index('Month'),['Prior tracker GMV','Current raw GMV'],[],report_currency),'brm_market_'+platform)
+            chart=pd.DataFrame(data);plot(combo(chart.set_index('Month'),['Prior tracker GMV','Current raw GMV'],[],report_currency,marketplace=platform),'brm_market_'+platform)
             table(chart,'brm_market_'+platform)
     with tabs[4]:
         section('Ads 2026 · source-reported investment')
@@ -320,7 +334,7 @@ elif page=='Executive overview':
         for col,i in zip(cols,range(offset,min(offset+3,9))):
             value=actuals[i];prior=last[i];comparison=expected[i]
             delta=pp(value,prior) if i in ratios else growth(value,prior)
-            label=None if delta is None else (fmt(delta,'pp') if i in ratios else f'{delta:+.1f}% YoY')
+            label=None if delta is None else (fmt(delta,'pp') if i in ratios else number(delta,st.session_state['decimal_places'],True)+'% YoY')
             with col:
                 st.metric(names[i]+(' · EUR' if i==0 and report_currency=='EUR' else ''),fmt(value,kinds[i]),label,delta_color='inverse' if i in lower else 'normal')
                 st.caption(f'PY: {fmt(prior,kinds[i])}  ·  Forecast: {fmt(comparison,kinds[i])}  ·  Δ: {fmt(pp(value,comparison),"pp" if i in ratios else kinds[i])}');st.caption(f'Forecast attainment: {fmt(divide(value,comparison,100),"pct")}  ·  FY target: {fmt(targets[i],kinds[i])}')
@@ -355,12 +369,12 @@ elif page=='Financial performance':
         for col in cumulative.columns[1:]:
             # Once a month is missing, do not silently turn an incomplete series into YTD.
             cumulative[col]=pd.to_numeric(cumulative[col],errors='coerce').cumsum(skipna=False)
-        plot(combo(cumulative.set_index('Month'),[],['Current year','Official forecast']), 'finance_cumulative')
+        plot(combo(cumulative.set_index('Month'),[],['Current year','Official forecast'],marketplace='Bosch'), 'finance_cumulative')
         table(cumulative,'finance_ytd')
 
 elif page=='Marketplace performance':
     a,b=comparable_dates(start,end);cur=monthly(shop);old=monthly(shop,a,b)
-    metric_row([('Store GMV',fmt(total(cur,'gmv'),'money'),f'{growth(total(cur,"gmv"),total(old,"gmv")):+.1f}% YoY' if growth(total(cur,'gmv'),total(old,'gmv')) is not None else None),('Orders',fmt(total(cur,'orders'))),('Units sold',fmt(total(cur,'units'))),('AOV · GMV',fmt(divide(total(cur,'gmv'),total(cur,'orders')),'money'))])
+    metric_row([('Store GMV',fmt(total(cur,'gmv'),'money'),number(growth(total(cur,"gmv"),total(old,"gmv")),st.session_state['decimal_places'],True)+'% YoY' if growth(total(cur,'gmv'),total(old,'gmv')) is not None else None),('Orders',fmt(total(cur,'orders'))),('Units sold',fmt(total(cur,'units'))),('AOV · GMV',fmt(divide(total(cur,'gmv'),total(cur,'orders')),'money'))])
     st.write('')
     tab1,tab2,tab3=st.tabs(['Monthly detail','YTD marketplace comparison','Daily performance'])
     allrows=[]
@@ -383,8 +397,8 @@ elif page=='Marketplace performance':
             with st.container(border=True):
                 section(f'{p} · {"Malaysia" if c=="MY" else "Singapore"}')
                 one,two=st.columns([1.6,1])
-                with one:plot(combo(data.set_index('Month'),['GMV','PY GMV'],['YoY %'],report_currency,True),f'market_{c}_{p}')
-                with two:plot(combo(data.set_index('Month'),['Visitors','PY visitors'],['CR %'],second_axis=True),f'traffic_{c}_{p}')
+                with one:plot(combo(data.set_index('Month'),['GMV','PY GMV'],['YoY %'],report_currency,True,marketplace=p),f'market_{c}_{p}')
+                with two:plot(combo(data.set_index('Month'),['Visitors','PY visitors'],['CR %'],second_axis=True,marketplace=p),f'traffic_{c}_{p}')
                 alerts=data[data['Traffic alert']!='']
                 if not alerts.empty:st.warning('Traffic opportunity: '+', '.join(alerts.Month)+'. Traffic rose while GMV or conversion fell compared with the preceding month.')
                 table(data,f'market_detail_{c}_{p}',['YoY %','MoM %','Visitor YoY %','Visitor MoM %'])
@@ -396,7 +410,13 @@ elif page=='Marketplace performance':
                 z=old[(old.country==c)&(old.marketplace==p)]
                 u,v=exact_audience(traffic[(traffic.country==c)&(traffic.marketplace==p)],start,end)
                 rows.append({'Store':f'{c} · {p}','GMV':total(x,'gmv'),'PY GMV':total(z,'gmv'),'YoY %':growth(total(x,'gmv'),total(z,'gmv')),'Contribution %':divide(total(x,'gmv'),total(cur,'gmv'),100),'Orders':total(x,'orders'),'Units':total(x,'units'),'Unique visitors':u,'Unique buyers':v,'CR %':divide(v,u,100)})
-            y=pd.DataFrame(rows);y[['GMV','PY GMV']]=y[['GMV','PY GMV']].apply(pd.to_numeric,errors='coerce');plot(px.bar(y,x='Store',y=['GMV','PY GMV'],barmode='group',color_discrete_sequence=[BLUE,'#CBD5DF']),'market_ytd');table(y,'market_ytd',['YoY %'])
+            y=pd.DataFrame(rows);y[['GMV','PY GMV']]=y[['GMV','PY GMV']].apply(pd.to_numeric,errors='coerce')
+            comparison_fig=go.Figure()
+            for field,previous in [('GMV',False),('PY GMV',True)]:
+                colors=[marketplace_theme('Shopee' if 'Shopee' in label else 'Lazada')[1 if previous else 0] for label in y.Store]
+                comparison_fig.add_bar(x=y.Store,y=y[field],name=field,marker_color=colors)
+            comparison_fig.update_layout(barmode='group')
+            plot(comparison_fig,'market_ytd');table(y,'market_ytd',['YoY %'])
             if allrows:
                 heat=pd.DataFrame(allrows).pivot(index=['Country','Marketplace'],columns='Month',values='YoY %').reindex(columns=[calendar.month_abbr[i] for i in range(1,13)])
                 heat.index=[' · '.join(i) for i in heat.index]
@@ -413,7 +433,7 @@ elif page=='Marketplace performance':
             for (c,p),x in daily.groupby(['country','marketplace']):
                 section(f'{p} · {c} · daily')
                 x=x.copy();x['Buyer CR %']=x.apply(lambda r:divide(r.buyers,r.visitors,100),axis=1)
-                plot(combo(x.set_index('date'),['gmv'],['Buyer CR %'],report_currency,True),'daily_'+c+p)
+                plot(combo(x.set_index('date'),['gmv'],['Buyer CR %'],report_currency,True,marketplace=p),'daily_'+c+p)
                 table(x.drop(columns=['fx_missing','period'],errors='ignore'),'daily_'+c+p)
         else:st.info('No daily source records in this workspace. Monthly files cannot be expanded into invented daily records.')
 
@@ -448,7 +468,7 @@ elif page in ['Product & SKU','Conversion analysis']:
             flags=flags[(flags.Marketplace!='Shopee')|(flags['Sales basis']==order_basis)]
             if not flags.empty:
                 st.warning('Product totals do not reconcile with shop totals for a comparison period. Review file periods before relying on movement or share metrics.')
-                st.dataframe(flags,hide_index=True,width='stretch')
+                table(flags,'product_reconciliation_flags')
         if not products.empty and (products.marketplace=='Shopee').any():st.caption('Shopee product periods come from the supplied filename / explicit month, because no report interval is embedded in these workbooks.')
     else:master=scoped(frames['sku_master'])
     if bu:master=master[master.business_unit.isin(bu)]
@@ -489,7 +509,7 @@ elif page in ['Product & SKU','Conversion analysis']:
             with left:donut(data,'Business unit','Revenue','bu_donut')
             with right:
                 split=products[products.period.isin([current,previous])].merge(master[['country','marketplace','listing_sku','business_unit']],on=['country','marketplace','listing_sku'])
-                plot(px.bar(split.groupby(['period','business_unit'],as_index=False).revenue.sum(min_count=1),x='period',y='revenue',color='business_unit',barmode='stack',color_discrete_sequence=[BLUE,NAVY,TEAL,'#89C8EA','#9CAFC0']),'bu_stacked')
+                plot(px.bar(split.groupby(['period','business_unit'],as_index=False).revenue.sum(min_count=1),x='period',y='revenue',color='business_unit',barmode='stack',color_discrete_sequence=marketplace_theme(marketplace)+['#9CAFC0']),'bu_stacked')
             table(data,'bu_analysis',['MoM %'])
         with c:
             table(top[['rank','previous_rank','rank_movement','product_name','status','revenue_change','units_change','share_pp']],'rank_movement',['rank_movement','revenue_change','units_change','share_pp'])
@@ -497,7 +517,7 @@ elif page in ['Product & SKU','Conversion analysis']:
             if not oldrank.empty:
                 dropped=oldrank[oldrank['rank']<=limit][~oldrank.canonical_sku.isin(top.canonical_sku)]
                 st.caption('Dropped out of the selected Top N (only meaningful when both months have complete assortment coverage).')
-                st.dataframe(dropped[['canonical_sku','product_name','rank']],hide_index=True,width='stretch')
+                table(dropped[['canonical_sku','product_name','rank']],'dropped_products')
             st.caption('New entrant means absent from the preceding imported month, not necessarily a newly launched product. Missing source history is identified separately.')
     else:
         cfg=st.columns(5)
@@ -525,7 +545,7 @@ elif page in ['Product & SKU','Conversion analysis']:
         if not x.empty:
             scatter=x.dropna(subset=['visitors','cr','revenue'])
             if not scatter.empty:
-                plot(px.scatter(scatter,x='visitors',y='cr',size='revenue',color='Opportunity',hover_name='product_name',labels={'visitors':'Product visitors','cr':'Buyer conversion %'},color_discrete_sequence=[BLUE,TEAL,'#E7A643','#D76176',NAVY]),'opportunity',380)
+                plot(px.scatter(scatter,x='visitors',y='cr',size='revenue',color='Opportunity',hover_name='product_name',labels={'visitors':'Product visitors','cr':'Buyer conversion %'},color_discrete_sequence=marketplace_theme(marketplace)+[NAVY]),'opportunity',380)
         tabs=st.tabs(['Consolidated selection','Shopee vs Lazada'])
         conversion_cols=['rank','product_name','canonical_sku','business_unit','revenue','units','visitors','buyers','cr','atc_units','asp','share','Opportunity','revenue_change','units_change','visitors_change','buyers_change','cr_pp','atc_units_change','asp_change','share_pp']
         with tabs[0]:table(x.head(limit)[conversion_cols],'conversion',['revenue_change','units_change','visitors_change','buyers_change','cr_pp','atc_units_change','asp_change','share_pp'])
@@ -575,8 +595,9 @@ elif page=='Advertising performance':
             section(f'{p} paid ads performance · {c}',f'{attr} · full-year monthly detail')
             if 'unverified' in attr:st.warning('BRM source-reported spend and Ads GMV. Attribution/order status is unverified. Ratios to Confirmed Order store GMV are unavailable; within-report ROAS/ACOS are recalculated from the entered amounts.')
             f=go.Figure()
-            for label,color in [('Ad spend',RED),('Ads GMV','#9AD9EF')]:f.add_bar(x=d.Month,y=d[label],name=label,marker_color=color)
-            f.add_scatter(x=d.Month,y=d.ROAS,name='Actual ROAS',yaxis='y2',line=dict(color=BLUE,width=3),mode='lines+markers')
+            palette=marketplace_theme(p)
+            for label,color in [('Ad spend',palette[0]),('Ads GMV',palette[1])]:f.add_bar(x=d.Month,y=d[label],name=label,marker_color=color)
+            f.add_scatter(x=d.Month,y=d.ROAS,name='Actual ROAS',yaxis='y2',line=dict(color=palette[2],width=3),mode='lines+markers')
             f.update_layout(barmode='group',yaxis2=dict(overlaying='y',side='right',showgrid=False,ticksuffix='×'))
             plot(f,'ads_'+c+p+attr)
             scope_selected=base[(base.period>=str(start)[:7])&(base.period<=str(end)[:7])]
