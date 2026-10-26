@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+.venv/
+.env
+.streamlit/secrets.toml
+*.sqlite*
+data/
+work/
+attachments/
+*.xlsx
+*.xls
