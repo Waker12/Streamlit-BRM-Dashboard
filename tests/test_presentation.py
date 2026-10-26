@@ -66,64 +66,9 @@ def test_display_controls_apply_across_pages_and_preserve_chart_choices(tmp_path
     monkeypatch.setenv('BOSCH_BI_DB',str(tmp_path/'display.sqlite'))
     app=AppTest.from_file(str(Path(__file__).resolve().parents[1]/'app.py'),default_timeout=60).run()
     assert not app.exception
-    assert re.search(r'\.\d{2}
+    assert re.search(r'\.\d{2}$',app.metric[0].value)
     app.selectbox(key='decimal_places').set_value(0).run()
-    assert not app.exception and not re.search(r'\.\d+
-    app.toggle(key='default_chart_labels').set_value(True).run()
-    assert app.toggle(key='chart_labels_exec_tns').value is True
-    app.toggle(key='chart_labels_exec_tns').set_value(False).run()
-    assert app.toggle(key='chart_labels_exec_mix').value is True
-    app.radio[0].set_value('Financial performance').run()
-    app.radio[0].set_value('Executive overview').run()
-    assert app.toggle(key='chart_labels_exec_tns').value is False
-    app.toggle(key='default_chart_labels').set_value(False).run()
-    assert app.toggle(key='chart_labels_exec_mix').value is False
-    for places in [0,2]:
-        app.selectbox(key='decimal_places').set_value(places).run()
-        app.toggle(key='default_chart_labels').set_value(True).run()
-        for page in ['Executive overview','Financial performance','Marketplace performance','Product & SKU','Conversion analysis','Advertising performance','BRM workbook','Data workspace']:
-            app.radio[0].set_value(page).run()
-            assert not app.exception,(places,page,[e.message for e in app.exception])
-        app.toggle(key='default_chart_labels').set_value(False).run()
-,app.metric[0].value)
-    app.selectbox(key='decimal_places').set_value(0).run()
-    assert not app.exception and '.00' not in app.metric[0].value
-    app.toggle(key='default_chart_labels').set_value(True).run()
-    assert app.toggle(key='chart_labels_exec_tns').value is True
-    app.toggle(key='chart_labels_exec_tns').set_value(False).run()
-    assert app.toggle(key='chart_labels_exec_mix').value is True
-    app.radio[0].set_value('Financial performance').run()
-    app.radio[0].set_value('Executive overview').run()
-    assert app.toggle(key='chart_labels_exec_tns').value is False
-    app.toggle(key='default_chart_labels').set_value(False).run()
-    assert app.toggle(key='chart_labels_exec_mix').value is False
-    for places in [0,2]:
-        app.selectbox(key='decimal_places').set_value(places).run()
-        app.toggle(key='default_chart_labels').set_value(True).run()
-        for page in ['Executive overview','Financial performance','Marketplace performance','Product & SKU','Conversion analysis','Advertising performance','BRM workbook','Data workspace']:
-            app.radio[0].set_value(page).run()
-            assert not app.exception,(places,page,[e.message for e in app.exception])
-        app.toggle(key='default_chart_labels').set_value(False).run()
-,app.metric[0].value)
-    app.toggle(key='default_chart_labels').set_value(True).run()
-    assert app.toggle(key='chart_labels_exec_tns').value is True
-    app.toggle(key='chart_labels_exec_tns').set_value(False).run()
-    assert app.toggle(key='chart_labels_exec_mix').value is True
-    app.radio[0].set_value('Financial performance').run()
-    app.radio[0].set_value('Executive overview').run()
-    assert app.toggle(key='chart_labels_exec_tns').value is False
-    app.toggle(key='default_chart_labels').set_value(False).run()
-    assert app.toggle(key='chart_labels_exec_mix').value is False
-    for places in [0,2]:
-        app.selectbox(key='decimal_places').set_value(places).run()
-        app.toggle(key='default_chart_labels').set_value(True).run()
-        for page in ['Executive overview','Financial performance','Marketplace performance','Product & SKU','Conversion analysis','Advertising performance','BRM workbook','Data workspace']:
-            app.radio[0].set_value(page).run()
-            assert not app.exception,(places,page,[e.message for e in app.exception])
-        app.toggle(key='default_chart_labels').set_value(False).run()
-,app.metric[0].value)
-    app.selectbox(key='decimal_places').set_value(0).run()
-    assert not app.exception and '.00' not in app.metric[0].value
+    assert not app.exception and not re.search(r'\.\d+$',app.metric[0].value)
     app.toggle(key='default_chart_labels').set_value(True).run()
     assert app.toggle(key='chart_labels_exec_tns').value is True
     app.toggle(key='chart_labels_exec_tns').set_value(False).run()

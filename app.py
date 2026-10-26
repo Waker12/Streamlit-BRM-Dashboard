@@ -334,7 +334,7 @@ elif page=='Executive overview':
         for col,i in zip(cols,range(offset,min(offset+3,9))):
             value=actuals[i];prior=last[i];comparison=expected[i]
             delta=pp(value,prior) if i in ratios else growth(value,prior)
-            label=None if delta is None else (fmt(delta,'pp') if i in ratios else f'{delta:+.1f}% YoY')
+            label=None if delta is None else (fmt(delta,'pp') if i in ratios else number(delta,st.session_state['decimal_places'],True)+'% YoY')
             with col:
                 st.metric(names[i]+(' · EUR' if i==0 and report_currency=='EUR' else ''),fmt(value,kinds[i]),label,delta_color='inverse' if i in lower else 'normal')
                 st.caption(f'PY: {fmt(prior,kinds[i])}  ·  Forecast: {fmt(comparison,kinds[i])}  ·  Δ: {fmt(pp(value,comparison),"pp" if i in ratios else kinds[i])}');st.caption(f'Forecast attainment: {fmt(divide(value,comparison,100),"pct")}  ·  FY target: {fmt(targets[i],kinds[i])}')
