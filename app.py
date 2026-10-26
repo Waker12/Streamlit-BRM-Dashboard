@@ -260,7 +260,7 @@ def annual_target():
 
 def finance_chart(key):
     df=financial_months().set_index('Month')
-    plot(combo(df,['Current year','Previous year'],['Official forecast','Stretch forecast'],report_currency),key,350)
+    plot(combo(df,['Current year','Previous year'],['Official forecast','Stretch forecast'],report_currency,marketplace='Bosch'),key,350)
 
 if page=='BRM workbook':
     st.caption('The five BRM tabs share a common reporting foundation. Other workbook tabs are excluded. Internal TNS takes priority; raw 2026 shop exports take priority over manual tracking.')
@@ -369,7 +369,7 @@ elif page=='Financial performance':
         for col in cumulative.columns[1:]:
             # Once a month is missing, do not silently turn an incomplete series into YTD.
             cumulative[col]=pd.to_numeric(cumulative[col],errors='coerce').cumsum(skipna=False)
-        plot(combo(cumulative.set_index('Month'),[],['Current year','Official forecast']), 'finance_cumulative')
+        plot(combo(cumulative.set_index('Month'),[],['Current year','Official forecast'],marketplace='Bosch'), 'finance_cumulative')
         table(cumulative,'finance_ytd')
 
 elif page=='Marketplace performance':
