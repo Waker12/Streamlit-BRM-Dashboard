@@ -15,6 +15,11 @@ from bosch_bi.adapters import adapter_kind,parse_source,period_from_filename
 from bosch_bi.policy import FX_POLICY,fixed_rate
 from bosch_bi.demo import generate
 from bosch_bi.engine import divide,growth,pp,total,weighted_rate,exact_audience,convert,previous_month,previous_year_period,comparable_dates,ranked_products,opportunity,complete_scopes,complete_months,reconciliation,product_store_reconciliation
+from importlib import reload
+from bosch_bi import charts as chart_module
+# Streamlit can rerun app.py while retaining helper modules from before a deploy.
+if getattr(chart_module,'DISPLAY_API_VERSION',None)!=1:
+    chart_module=reload(chart_module)
 from bosch_bi.charts import plot,combo,donut,BLUE,TEAL,NAVY,RED
 from bosch_bi.presentation import number,numeric_display,numeric_columns,marketplace_theme,MARKETPLACE_COLORS
 
@@ -784,3 +789,4 @@ elif page=='Reporting methodology':
 
 st.divider()
 st.caption('BOSCH POWER TOOLS  /  COMMERCE INTELLIGENCE     ·     '+('DEMO WORKSPACE · NOT FOR MANAGEMENT REPORTING' if mode=='Demo workspace' else 'UPLOADED DATA · REVIEW COVERAGE BEFORE REPORTING'))
+

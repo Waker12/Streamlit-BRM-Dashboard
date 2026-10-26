@@ -6,6 +6,7 @@ import streamlit as st
 from .presentation import MARKETPLACE_COLORS, marketplace_theme
 
 BLUE='#007BC0'; NAVY='#173B57'; RED='#E20015'; TEAL='#20A4A0'
+DISPLAY_API_VERSION=1
 
 
 def polish(fig, height=350):
@@ -83,3 +84,4 @@ def donut(df,names,values,key):
     f=px.pie(df,names=names,values=values,hole=.72,color=names,color_discrete_map=MARKETPLACE_COLORS if names=='marketplace' else None,color_discrete_sequence=palette+[TEAL,'#9CAFC0','#6B8EA8','#BAD9DD','#8593B5'])
     f.update_layout(showlegend=True)
     plot(f,key,330)
+
